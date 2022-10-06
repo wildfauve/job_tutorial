@@ -1,5 +1,8 @@
 # Python Databricks Job Tutorial
 
+## Poetry and Virtual Environments
+
+
 ## Setting up the Env
 
 Set up the test and deploy (temp) environments
@@ -27,3 +30,171 @@ poetry add PyMonad
 poetry add pino
 poetry add dependency-injector
 ```
+
+## Setting Up DI
+
+We'll use DI to manage dependencies, especially for Spark-based resources.  While our local environment is essentially equivalent to the env of a Databricks Spark cluster, there are some differences between the delta open source project and delta available on the cluster.  Another example is that dbutils is not available locally.  DI is a good mechanism for dealing with this problem.
+
+Our project DI container looks like this..
+
+```python
+from dependency_injector import containers, providers
+
+from job_tutorial.util import session
+from job_tutorial.repo import db
+
+
+class Container(containers.DeclarativeContainer):
+    config = providers.Configuration()
+
+    session = providers.Callable(session.di_session,
+                                 session.create_session,
+                                 session.spark_session_config)
+
+    database = providers.Factory(db.Db,
+                                 session,
+                                 config)
+```
+
+We'll create a config file which provides a config dictionary, and initialise a single DB class with the config and the spark session.
+
+And we'll create an initialiser for the container.
+
+```python
+mods = ['job_tutorial.util.spark',
+        'job_tutorial.util.configuration']
+
+def build_container():
+    if not env.Env().env == 'test':
+        init_container()
+
+
+def init_container():
+    di = di_container.Container()
+    di.config.from_dict(config.config)
+    di.wire(modules=mods)
+    return di
+```
+
+The `mods` define the modules into which the DI container will be injected (using the `@inject` decorator).  Lets look at the `configuration.py`
+
+```python
+from typing import List, Dict, AnyStr, Union
+from dependency_injector.wiring import Provide, inject
+
+from job_tutorial.di_container import Container
+from job_tutorial.util import fn
+
+def config_for(elements: List) -> Union[Dict, AnyStr]:
+    return fn.deep_get(di_config(), elements)
+
+@inject
+def di_config(cfg=Provide[Container.config]) -> Dict:
+    return cfg
+```
+
+Notice the use of type annotations.
+
+Now we want to override the DI container and configuration in our tests.
+
+We set up a testing config `config_for_testing.py` (notice the db path has changed from a DBFS path to a local path), we remove these in our .gitignore.
+
+```python
+import pytest
+
+from dependency_injector import containers, providers
+
+from job_tutorial.initialiser import container
+from job_tutorial.util import session
+from job_tutorial.repo import db
+
+from tests.shared import spark_test_session, config_for_test
+
+
+class OverridingContainer(containers.DeclarativeContainer):
+    config = providers.Configuration()
+
+    session = providers.Callable(session.di_session,
+                                 spark_test_session.spark_delta_session,
+                                 spark_test_session.spark_session_config)
+
+    database = providers.Factory(db.Db,
+                                 session,
+                                 config)
+
+@pytest.fixture
+def test_container():
+    return init_test_container()
+
+
+def init_test_container():
+    di = container.init_container()
+    over = OverridingContainer()
+    over.config.from_dict(config_for_test.config)
+    di.override(over)
+    return over
+
+```
+
+Here we initialise the main container, then override it for testing.  We're providing a test dependency for the spark session and the config.  Let's have a look at the spark session in more detail.
+
+Setting up our test spark session is different from the spark context provided on the cluster.  We're using the utility `session.di_session` to establish the session.  Its very simple...
+
+```python
+def di_session(create_fn: Callable = create_session, config_adder_fn: Callable = fn.identity) -> SparkSession:
+    sp = create_fn()
+    config_adder_fn(sp)
+    return sp
+```
+
+We pass in 2 callables (references to functions).  One to build the session, the other to apply any session config.  For testing the session builder function is `spark_test_session.spark_delta_session`
+
+```python
+import pyspark
+
+def delta_builder():
+    return (pyspark.sql.SparkSession.builder.appName("test_delta_session")
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+            .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog"))
+```
+
+And the configuration callable is...
+
+```python
+def spark_session_config(spark):
+    spark.conf.set('hive.exec.dynamic.partition', "true")
+    spark.conf.set('hive.exec.dynamic.partition.mode', "nonstrict")
+```
+
+Finally, once the container is overridden, we can get access to the session via a module which returns the session from the container.  This is `util.spark.py`
+
+```python
+from dependency_injector.wiring import Provide, inject
+from job_tutorial.di_container import Container
+
+@inject
+def spark(session=Provide[Container.session]):
+    return session
+```
+
+Let's try this out in the console.  Run `poetry run python`
+
+```python
+from tests.shared import *
+from job_tutorial.util import spark, configuration
+init_test_container()
+sp = spark.spark()
+config = configuration.di_config()
+```
+
+More importantly, let's do the same in a test.  We use the test container pytest fixture in the tests.  But otherwise the test looks roughly the same.
+
+```python
+def test_set_up_spark_session(test_container):
+    sp = spark.spark()
+
+    assert isinstance(sp, pyspark.sql.session.SparkSession)
+```
+
+We can use the debugger (either from the common library or using an external lib as we do here) in most places by calling the `breakpoint()` function.
+
