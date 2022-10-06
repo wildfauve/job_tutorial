@@ -45,9 +45,10 @@ poetry add pino
 poetry add dependency-injector
 ```
 
-## Tutorial 2: Setting Up DI
+## Tutorial1: Setting Up DI
 
-`git checkout set-up-di`
+`git checkout tutorial1-set-up-di` 
+
 
 We'll use DI to manage dependencies, especially for Spark-based resources. While our local environment is essentially
 equivalent to the env of a Databricks Spark cluster, there are some differences between the delta open source project
@@ -233,7 +234,7 @@ def test_set_up_spark_session(test_container):
 We can use the debugger (either from the common library or using an external lib as we do here) in most places by
 calling the `breakpoint()` function.
 
-## Tutorial 3: Hive Table Fixtures and Reading Delta Tables into Dataframes
+## Tutorial 2: Hive Table Fixtures and Reading Delta Tables into Dataframes
 
 `git checkout hive-table-fixtures`
 
