@@ -48,6 +48,55 @@ poetry add pino
 poetry add dependency-injector
 ```
 
+The dependencies are defined in the `pyproject.toml` with the versions of each dependency in `poetry.lock`
+
+`pyproject.toml` should now look like this.
+
+```toml
+[tool.poetry]
+name = "random-python-project-using-poetry"
+version = "0.1.0"
+description = ""
+authors = ["Col Perks <wild.fauve@gmail.com>"]
+readme = "README.md"
+packages = [{include = "random_python_project_using_poetry"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+databricker = {git = "https://github.com/wildfauve/databricker", rev = "main"}
+jobsworth = {git = "https://github.com/wildfauve/jobsworth.git", rev = "main"}
+pyspark = "^3.3.0"
+delta-spark = "^2.1.0"
+PyMonad = "^2.4.0"
+pino = "^0.6.0"
+dependency-injector = "^4.40.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.1.3"
+pdbpp = "^0.10.3"
+pytest-env = "^0.6.2"
+databricks-cli = "^0.17.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+```
+
+## Setting up the next tutorial
+
+OK.  We're now ready to clone this repo and start the tutorial.  Remove the test project.
+
+```bash
+rm -rf random_python_project_using_poetry
+```
+
+```bash
+git clone git@github.com:wildfauve/job_tutorial.git
+git checkout main
+poetry install
+```
+
 ## Tutorial1: Setting Up DI
 
 `git checkout tutorial1-set-up-di` 
@@ -216,56 +265,3 @@ def test_set_up_spark_session(test_container):
 ```
 
 We can use the debugger (either from the common library or using an external lib as we do here) in most places by calling the `breakpoint()` function.
-
-=======
-The dependencies are defined in the `pyproject.toml` with the versions of each dependency in `poetry.lock`
-
-`pyproject.toml` should now look like this.
-
-```toml
-[tool.poetry]
-name = "random-python-project-using-poetry"
-version = "0.1.0"
-description = ""
-authors = ["Col Perks <wild.fauve@gmail.com>"]
-readme = "README.md"
-packages = [{include = "random_python_project_using_poetry"}]
-
-[tool.poetry.dependencies]
-python = "^3.9"
-databricker = {git = "https://github.com/wildfauve/databricker", rev = "main"}
-jobsworth = {git = "https://github.com/wildfauve/jobsworth.git", rev = "main"}
-pyspark = "^3.3.0"
-delta-spark = "^2.1.0"
-PyMonad = "^2.4.0"
-pino = "^0.6.0"
-dependency-injector = "^4.40.0"
-
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.1.3"
-pdbpp = "^0.10.3"
-pytest-env = "^0.6.2"
-databricks-cli = "^0.17.3"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-```
-
-## Setting up the next tutorial
-
-OK.  We're now ready to clone this repo and start the tutorial.  Remove the test project.
-
-```bash
-rm -rf random_python_project_using_poetry
-```
-
-```bash
-git clone git@github.com:wildfauve/job_tutorial.git
-git checkout main
-```
-
-
-
->>>>>>> main
