@@ -33,6 +33,8 @@ poetry add dependency-injector
 
 ## Setting Up DI
 
+`git checkout set-up-di` 
+
 We'll use DI to manage dependencies, especially for Spark-based resources.  While our local environment is essentially equivalent to the env of a Databricks Spark cluster, there are some differences between the delta open source project and delta available on the cluster.  Another example is that dbutils is not available locally.  DI is a good mechanism for dealing with this problem.
 
 Our project DI container looks like this..
