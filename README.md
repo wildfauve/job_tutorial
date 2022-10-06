@@ -2,8 +2,9 @@
 
 ## Poetry and Virtual Environments
 
+## Tutorial 1: Setting up the Env
 
-## Setting up the Env
+`git checkout main`
 
 Set up the test and deploy (temp) environments
 
@@ -33,9 +34,12 @@ poetry add dependency-injector
 
 ## Setting Up DI
 
-`git checkout set-up-di` 
+`git checkout set-up-di`
 
-We'll use DI to manage dependencies, especially for Spark-based resources.  While our local environment is essentially equivalent to the env of a Databricks Spark cluster, there are some differences between the delta open source project and delta available on the cluster.  Another example is that dbutils is not available locally.  DI is a good mechanism for dealing with this problem.
+We'll use DI to manage dependencies, especially for Spark-based resources. While our local environment is essentially
+equivalent to the env of a Databricks Spark cluster, there are some differences between the delta open source project
+and delta available on the cluster. Another example is that dbutils is not available locally. DI is a good mechanism for
+dealing with this problem.
 
 Our project DI container looks like this..
 
@@ -58,13 +62,15 @@ class Container(containers.DeclarativeContainer):
                                  config)
 ```
 
-We'll create a config file which provides a config dictionary, and initialise a single DB class with the config and the spark session.
+We'll create a config file which provides a config dictionary, and initialise a single DB class with the config and the
+spark session.
 
 And we'll create an initialiser for the container.
 
 ```python
 mods = ['job_tutorial.util.spark',
         'job_tutorial.util.configuration']
+
 
 def build_container():
     if not env.Env().env == 'test':
@@ -78,7 +84,8 @@ def init_container():
     return di
 ```
 
-The `mods` define the modules into which the DI container will be injected (using the `@inject` decorator).  Lets look at the `configuration.py`
+The `mods` define the modules into which the DI container will be injected (using the `@inject` decorator). Lets look at
+the `configuration.py`
 
 ```python
 from typing import List, Dict, AnyStr, Union
@@ -87,8 +94,10 @@ from dependency_injector.wiring import Provide, inject
 from job_tutorial.di_container import Container
 from job_tutorial.util import fn
 
+
 def config_for(elements: List) -> Union[Dict, AnyStr]:
     return fn.deep_get(di_config(), elements)
+
 
 @inject
 def di_config(cfg=Provide[Container.config]) -> Dict:
@@ -99,7 +108,8 @@ Notice the use of type annotations.
 
 Now we want to override the DI container and configuration in our tests.
 
-We set up a testing config `config_for_testing.py` (notice the db path has changed from a DBFS path to a local path), we remove these in our .gitignore.
+We set up a testing config `config_for_testing.py` (notice the db path has changed from a DBFS path to a local path), we
+remove these in our .gitignore.
 
 ```python
 import pytest
@@ -124,6 +134,7 @@ class OverridingContainer(containers.DeclarativeContainer):
                                  session,
                                  config)
 
+
 @pytest.fixture
 def test_container():
     return init_test_container()
@@ -138,9 +149,11 @@ def init_test_container():
 
 ```
 
-Here we initialise the main container, then override it for testing.  We're providing a test dependency for the spark session and the config.  Let's have a look at the spark session in more detail.
+Here we initialise the main container, then override it for testing. We're providing a test dependency for the spark
+session and the config. Let's have a look at the spark session in more detail.
 
-Setting up our test spark session is different from the spark context provided on the cluster.  We're using the utility `session.di_session` to establish the session.  Its very simple...
+Setting up our test spark session is different from the spark context provided on the cluster. We're using the
+utility `session.di_session` to establish the session. Its very simple...
 
 ```python
 def di_session(create_fn: Callable = create_session, config_adder_fn: Callable = fn.identity) -> SparkSession:
@@ -149,10 +162,12 @@ def di_session(create_fn: Callable = create_session, config_adder_fn: Callable =
     return sp
 ```
 
-We pass in 2 callables (references to functions).  One to build the session, the other to apply any session config.  For testing the session builder function is `spark_test_session.spark_delta_session`
+We pass in 2 callables (references to functions). One to build the session, the other to apply any session config. For
+testing the session builder function is `spark_test_session.spark_delta_session`
 
 ```python
 import pyspark
+
 
 def delta_builder():
     return (pyspark.sql.SparkSession.builder.appName("test_delta_session")
@@ -168,28 +183,32 @@ def spark_session_config(spark):
     spark.conf.set('hive.exec.dynamic.partition.mode', "nonstrict")
 ```
 
-Finally, once the container is overridden, we can get access to the session via a module which returns the session from the container.  This is `util.spark.py`
+Finally, once the container is overridden, we can get access to the session via a module which returns the session from
+the container. This is `util.spark.py`
 
 ```python
 from dependency_injector.wiring import Provide, inject
 from job_tutorial.di_container import Container
+
 
 @inject
 def spark(session=Provide[Container.session]):
     return session
 ```
 
-Let's try this out in the console.  Run `poetry run python`
+Let's try this out in the console. Run `poetry run python`
 
 ```python
 from tests.shared import *
 from job_tutorial.util import spark, configuration
+
 init_test_container()
 sp = spark.spark()
 config = configuration.di_config()
 ```
 
-More importantly, let's do the same in a test.  We use the test container pytest fixture in the tests.  But otherwise the test looks roughly the same.
+More importantly, let's do the same in a test. We use the test container pytest fixture in the tests. But otherwise the
+test looks roughly the same.
 
 ```python
 def test_set_up_spark_session(test_container):
@@ -198,5 +217,98 @@ def test_set_up_spark_session(test_container):
     assert isinstance(sp, pyspark.sql.session.SparkSession)
 ```
 
-We can use the debugger (either from the common library or using an external lib as we do here) in most places by calling the `breakpoint()` function.
+We can use the debugger (either from the common library or using an external lib as we do here) in most places by
+calling the `breakpoint()` function.
+
+## Hive Table Fixtures
+
+`git checkout hive-table-fixtures`
+
+Our target "pipeline" in the job will be:
+
++ Start with an existing Hive Table (which might be an operational data product)
++ Perform a transform
++ Append to a new Hive Table
+
+The first thing we want to do is set up some test fixtures defining the input table.
+
+We'll create a simple multi-object JSON file here `tests/fixtures/table1_rows.json`. Then define a pytest fixture to
+read that into a dataframe and save it as a delta table.
+
+```python
+@pytest.fixture
+def create_table1():
+    (table1_test_df().write
+     .format(configuration.config_for(["table_format"]))
+     .mode("append")
+     .saveAsTable(configuration.config_for(["tutorialTable1", "fully_qualified"])))
+```
+
+This creates a table, HIVE and Delta metadata at `spark-warehouse/tutorialdomain.db`. This looks exactly the same as it
+might on the cluster.
+
+One way to read this table into a dataframe is to use the spark session directly. Checkout the
+test `tests/test_repo/test_table1.py`.
+
+```python
+def test_establish_table1_fixture(test_container, init_db, create_table1):
+    df = spark.spark().table(configuration.config_for(['tutorialTable1', 'fully_qualified']))
+
+    assert df.columns == ['id', 'name', 'pythons', 'season']
+
+    sketches = [row.name for row in df.select(df.name).collect()]
+
+    assert sketches == ['The Piranha Brothers', 'The Spanish Inquisition']
+```
+
+We want to put all this common repository logic in one place, instead of tests and other layers interacting with spark
+DFs directly, we can mediate that through a repository model.
+
+First we'll create a simple repo class for Table1.
+
+```python
+class TutorialTable1:
+    config_root = "tutorialTable1"
+
+    def __init__(self, db):
+        self.db = db
+```
+
+That dependency is the `db.py` we created previously and is already in the DI container. So, lets inject the DB
+dependency so that the repo has access to the Spark session. Lets add the repo to the container.
+
+```python
+class Container(containers.DeclarativeContainer):
+    tutorial_table1 = providers.Factory(tutorial_table1.TutorialTable1,
+                                        database)
+```
+
+And we'll create a module that allows us to get the repo dependencies.
+
+```python
+from dependency_injector.wiring import Provide, inject
+from job_tutorial.di_container import Container
+
+@inject
+def tutorial_table1_repo(repo=Provide[Container.tutorial_table1]):
+    return repo
+```
+
+And we'll need to wire it up to the DI container.  In `initialiser.container.py`
+
+```python
+mods = ['job_tutorial.util.spark',
+        'job_tutorial.util.configuration',
+        'job_tutorial.repo.repo_inject']
+```
+
+Now we can call the repo to read the table into a dataframe.  Like so.
+
+```python
+from job_tutorial.repo import repo_inject
+
+df = repo_inject.tutorial_table1_repo().read()
+```
+
+
 

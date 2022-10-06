@@ -1,0 +1,31 @@
+[
+  {
+    "id": "https://example.nz/montyPython/sketches/thePiranhaBrothers",
+    "name": "The Piranha Brothers",
+    "season": "S02E01",
+    "pythons": [
+      {
+        "id": "https://example.nz/montyPython/michealPalin"
+      },
+      {
+        "id": "https://example.nz/montyPython/johnCleese"
+      }
+    ]
+  },
+  {
+    "id": "https://example.nz/montyPython/sketches/thePiranhaBrothers",
+    "name": "The Spanish Inquisition",
+    "season": "S02E02",
+    "pythons": [
+      {
+        "id": "https://example.nz/montyPython/michealPalin"
+      },
+      {
+        "id": "https://example.nz/montyPython/terryJones"
+      },
+            {
+        "id": "https://example.nz/montyPython/terryGillian"
+      }
+    ]
+  }
+]

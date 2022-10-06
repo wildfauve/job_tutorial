@@ -4,8 +4,8 @@ JOB_URN_BASE = "urn:sparkjob:domainName:JobName"
 TABLE_FORMAT = 'delta'
 DATABASE_NAME = 'tutorialDomain'
 DATABASE_PATH = "spark-warehouse/tutorialDomain.db"
-TABLE1 = "tutorialTable1"
-TABLE2 = "tutorialTable2"
+TABLE1 = "tutorial_table1"
+TABLE2 = "tutorial_table2"
 
 config = {
     'env': env.Env().env,

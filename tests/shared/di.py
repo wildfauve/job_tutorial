@@ -4,7 +4,7 @@ from dependency_injector import containers, providers
 
 from job_tutorial.initialiser import container
 from job_tutorial.util import session
-from job_tutorial.repo import db
+from job_tutorial.repo import db, tutorial_table1
 
 from tests.shared import spark_test_session, config_for_test
 
@@ -19,6 +19,9 @@ class OverridingContainer(containers.DeclarativeContainer):
     database = providers.Factory(db.Db,
                                  session,
                                  config)
+
+    tutorial_table1 = providers.Factory(tutorial_table1.TutorialTable1,
+                                        database)
 
 @pytest.fixture
 def test_container():
