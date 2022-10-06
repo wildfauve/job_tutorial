@@ -32,7 +32,7 @@ poetry add pino
 poetry add dependency-injector
 ```
 
-## Setting Up DI
+## Tutorial 2: Setting Up DI
 
 `git checkout set-up-di`
 
@@ -220,7 +220,7 @@ def test_set_up_spark_session(test_container):
 We can use the debugger (either from the common library or using an external lib as we do here) in most places by
 calling the `breakpoint()` function.
 
-## Hive Table Fixtures
+## Tutorial 3: Hive Table Fixtures and Reading Delta Tables into Dataframes
 
 `git checkout hive-table-fixtures`
 
