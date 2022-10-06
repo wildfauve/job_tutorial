@@ -90,6 +90,7 @@ rm -rf random_python_project_using_poetry
 ```bash
 git clone git@github.com:wildfauve/job_tutorial.git
 git checkout main
+poetry install
 ```
 
 
