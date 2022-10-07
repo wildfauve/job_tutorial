@@ -375,3 +375,10 @@ from job_tutorial.repo import repo_inject
 df = repo_inject.tutorial_table1_repo().read()
 ```
 
+# Next Tutorial
+
+In the next tutorial, we'll look at transforming the operational data product and writing it as a delta table.
+
+```shell
+git checkout tutorial3-transform
+```
