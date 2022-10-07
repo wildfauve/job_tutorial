@@ -3,11 +3,13 @@
 ## Poetry and Virtual Environments
 
 ## Setting up the Env
-This tutorial is a collection of branches linked to each other, with each branch dealing with a specific tutorial.  You start on `main`.  At the beginning of each tutorial checkout the branch defined at the top of the tutorial.
+
+This tutorial is a collection of branches linked to each other, with each branch dealing with a specific tutorial. You
+start on `main`. At the beginning of each tutorial checkout the branch defined at the top of the tutorial.
 
 ## Setting up A Poetry Env
 
-Before we start with this tutorial, let's have a quick look at setting up a python project from scratch. 
+Before we start with this tutorial, let's have a quick look at setting up a python project from scratch.
 
 We create a new python project (using Poetry) as follows.
 
@@ -16,7 +18,7 @@ poetry new random_python_project_using_poetry
 cd random_python_project_using_poetry
 ```
 
-Now we'll add some dependencies.  Firstly, to set up the dev packages.
+Now we'll add some dependencies. Firstly, to set up the dev packages.
 
 ```bash
 poetry add pytest --group dev
@@ -58,12 +60,12 @@ version = "0.1.0"
 description = ""
 authors = ["Col Perks <wild.fauve@gmail.com>"]
 readme = "README.md"
-packages = [{include = "random_python_project_using_poetry"}]
+packages = [{ include = "random_python_project_using_poetry" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-databricker = {git = "https://github.com/wildfauve/databricker", rev = "main"}
-jobsworth = {git = "https://github.com/wildfauve/jobsworth.git", rev = "main"}
+databricker = { git = "https://github.com/wildfauve/databricker", rev = "main" }
+jobsworth = { git = "https://github.com/wildfauve/jobsworth.git", rev = "main" }
 pyspark = "^3.3.0"
 delta-spark = "^2.1.0"
 PyMonad = "^2.4.0"
@@ -84,7 +86,7 @@ build-backend = "poetry.core.masonry.api"
 
 ## Setting up the next tutorial
 
-OK.  We're now ready to clone this repo and start the tutorial.  Remove the test project.
+OK. We're now ready to clone this repo and start the tutorial. Remove the test project.
 
 ```bash
 rm -rf random_python_project_using_poetry
@@ -98,8 +100,7 @@ poetry install
 
 ## Tutorial1: Setting Up DI
 
-`git checkout tutorial1-set-up-di` 
-
+`git checkout tutorial1-set-up-di`
 
 We'll use DI to manage dependencies, especially for Spark-based resources. While our local environment is essentially
 equivalent to the env of a Databricks Spark cluster, there are some differences between the delta open source project
@@ -354,12 +355,13 @@ And we'll create a module that allows us to get the repo dependencies.
 from dependency_injector.wiring import Provide, inject
 from job_tutorial.di_container import Container
 
+
 @inject
 def tutorial_table1_repo(repo=Provide[Container.tutorial_table1]):
     return repo
 ```
 
-And we'll need to wire it up to the DI container.  In `initialiser.container.py`
+And we'll need to wire it up to the DI container. In `initialiser.container.py`
 
 ```python
 mods = ['job_tutorial.util.spark',
@@ -367,7 +369,7 @@ mods = ['job_tutorial.util.spark',
         'job_tutorial.repo.repo_inject']
 ```
 
-Now we can call the repo to read the table into a dataframe.  Like so.
+Now we can call the repo to read the table into a dataframe. Like so.
 
 ```python
 from job_tutorial.repo import repo_inject
@@ -382,3 +384,108 @@ In the next tutorial, we'll look at transforming the operational data product an
 ```shell
 git checkout tutorial3-transform
 ```
+
+## Tutorial 3: Transformation and Delta Writing
+
+`git checkout tutorial3-transform`
+
+In this tutorial we add a dataframe transformer which executes a spark transformation on the original dataframe. Then
+we'll save it to a delta table.
+
+First, lets add a test. We're going to perform some, roughly random, transformations on our input dataset. We'll explode
+a column create a new column and drop others. First the test.
+
+```python
+from job_tutorial.model import transformer
+
+
+def test_transform(test_container, init_db, create_table1):
+    df = repo_inject.tutorial_table1_repo().read()
+
+    new_df = transformer.transform(df)
+
+    rows = new_df.select(F.col("sketch.name")).distinct().collect()
+
+    assert [row.name for row in rows] == ['The Spanish Inquisition', 'The Piranha Brothers']
+```
+
+To implement this, we'll create a new layer. The `model` layer will contain our domain logic. Our transformer looks like
+this.
+
+```python
+from pyspark.sql import dataframe
+from pyspark.sql import functions as F
+
+
+def transform(df: dataframe.DataFrame) -> dataframe.DataFrame:
+    python_df = (df.withColumn('python', F.explode(df.pythons))
+                 .withColumn('sketch', sketch_struct())
+                 .drop(df.pythons)
+                 .drop(df.name)
+                 .drop(df.id)
+                 .drop(df.season))
+
+    return python_df
+
+
+def sketch_struct():
+    return (F.struct(F.col('name'),
+                     F.col('season')))
+```
+
+Then we'll save the new dataframe to its own Hive table. We'll add a new repository to the repository layer, calling it,
+imaginatively, `tutorial_table2`. For this simple example, the functions in `table2` look exactly like those
+from `table1`.
+
+The repos are dependency injected, so, we'll add `table2` to our DI containers in test and production.
+
+```python
+tutorial_table2 = providers.Factory(tutorial_table2.TutorialTable2, database)
+```
+
+And finally to the `repo-inject` module.
+
+```python
+@inject
+def tutorial_table2_repo(repo=Provide[Container.tutorial_table2]):
+    return repo
+```
+
+Now lets test that the new dataframe can be written to Hive.  We'll create a new test module at `tests/test_repo/test_table2.py`
+
+```python
+def test_write_df_to_table(test_container, init_db, create_table1):
+    df = transformer.transform(repo_inject.tutorial_table1_repo().read())
+
+    repo_inject.tutorial_table2_repo().append(df)
+
+    table2 = repo_inject.tutorial_table2_repo().read()
+
+    breakpoint()
+
+    rows = table2.select(F.col("sketch.name")).distinct().collect()
+
+    assert [row.name for row in rows] == ['The Spanish Inquisition', 'The Piranha Brothers']
+```
+
+If we breakpoint into that test, we'll see that we now have 2 hive tables at the test DB location `spark-warehouse/tutorialdomain.db`.  These will be dropped after the test is complete.
+
+Another thing to notice is the amount of coordination the test has to perform; transforming the dataframe, writing it, reading itr back, etc.  We'll be wiring the pipeline up in the next tutorial, but for the moment to DRY out this test by adding a fixture which generates the transformed dataframe.  First we'll add a pytest fixture.
+
+```python
+@pytest.fixture
+def table2_dataframe():
+    df = transformer.transform(repo_inject.tutorial_table1_repo().read())
+    return df
+```
+
+Then we give the fixture to the test constructor.
+
+```python
+def test_write_df_to_table_dry_out(test_container, init_db, create_table1, table2_dataframe):
+    repo_inject.tutorial_table2_repo().append(table2_dataframe)
+```
+
+In the next tutorial, we'll wire up our pipeline of dataframes, hive writers and transformations.  To get there, `git checkout tutorial4-command-pipeline`
+
+
