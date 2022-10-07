@@ -488,4 +488,30 @@ def test_write_df_to_table_dry_out(test_container, init_db, create_table1, table
 
 In the next tutorial, we'll wire up our pipeline of dataframes, hive writers and transformations.  To get there, `git checkout tutorial4-command-pipeline`
 
+## Tutorial4: Command Pipeline
+
+`git checkout tutorial4-command-pipeline`
+
+In this tutorial, we will wire up our various building blocks to form a complete spark job.  We'll create a simple command layer which will run the pipeline, and add a job entry point to be invoked by the Spark engine.  Let's review what our pipeline needs to do.
+
+1. Read the data, in JSON format, from object store (which would be some DBFS mount on the Databricks cluster, but in our tests its just a test fixture).
+2. Write the JSON data (well, the dataframe) to Table1.
+3. Read from Table1 and transform the table1 dataframe.
+4. Write the transformed dataframe to table2.
+
+We've been working inside out; starting with the models and repos.  Now we'll move up a layer to wire up the pipeline.  This is our command layer, which will contain the orchestration.  Let's create a test first.
+
+```python
+from job_tutorial.command import minimal_pipeline
+
+
+def test_pipeline_returns_success(test_container, init_db):
+    result = minimal_pipeline.run("tests/fixtures/table1_rows.json")
+
+    assert result.is_right()
+```
+
+The pipeline command takes a file location and returns a result wrapped in a Result monad.  We'll be using result monads to wrap our pipeline commands to take advantage of function composition and error handling.  The Result monad is simply a container wrapping a value, with the result either being a "left" or "right", an error or success.
+
+Now let's describe our pipeline as a collection of composable functions, what do nothing apart from returning a success.
 
