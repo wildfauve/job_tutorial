@@ -24,12 +24,11 @@ class TutorialTable1:
                 .option('ignoreChanges', True)
                 .table(self.db_table_name()))
 
-    def create(self, df, *partition_cols):
+    def append(self, df):
         (df.write
          .format(self.db.table_format())
-         .partitionBy(partition_cols)
          .mode("append")
-         .saveAsTable(self.db_table_name))
+         .saveAsTable(self.db_table_name()))
 
     def upsert(self, df, *partition_cols):
         if not self.table_exists():

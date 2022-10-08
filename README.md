@@ -509,9 +509,154 @@ def test_pipeline_returns_success(test_container, init_db):
     result = minimal_pipeline.run("tests/fixtures/table1_rows.json")
 
     assert result.is_right()
+    assert result.value.object_location == "tests/fixtures/table1_rows.json"
 ```
 
 The pipeline command takes a file location and returns a result wrapped in a Result monad.  We'll be using result monads to wrap our pipeline commands to take advantage of function composition and error handling.  The Result monad is simply a container wrapping a value, with the result either being a "left" or "right", an error or success.
 
-Now let's describe our pipeline as a collection of composable functions, what do nothing apart from returning a success.
+Now let's describe our pipeline as a collection of composable functions, which will do nothing apart from returning a success.  These are our sub-commands.  First we'll create a value dataclass we can pass to each function.  This provides a common interface for each sub-command.  The value looks like this.
+
+```python
+from pyspark.sql import dataframe
+from dataclasses import dataclass
+
+@dataclass
+class DataClassAbstract:
+    def replace(self, key, value):
+        setattr(self, key, value)
+        return self
+
+@dataclass
+class PipelineValue(DataClassAbstract):
+    object_location: str
+    input_dataframe: dataframe.DataFrame = None
+```
+
+Our minimal pipeline, which does nothing, represents the shape of the pipeline.
+
+```python
+def run(object_location: str) -> monad.EitherMonad[value.PipelineValue]:
+    result = (monad.Right(value.PipelineValue(object_location=object_location))
+              >> read_data
+              >> write_table1
+              >> transform
+              >> write_table2)
+    return result
+
+
+def read_data(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    return monad.Right(val)
+
+
+def write_table1(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    return monad.Right(val)
+
+
+def transform(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    return monad.Right(val)
+
+
+def write_table2(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    return monad.Right(val)
+```
+
+Our this pipeline should return a Right wrapping the value.  Running this test should pass. 
+
+```shell
+poetry run python -m pytest tests/test_command/test_pipeline.py::test_minimal_pipeline_returns_success
+```
+
+Now, to the actual pipeline.  We want to get this test passing.
+
+```python
+def test_pipeline_returns_success(test_container, init_db):
+    result = pipeline.run("tests/fixtures/table1_rows.json")
+
+    assert result.is_right()
+
+    table2 = repo_inject.tutorial_table2_repo().read()
+
+    rows = table2.select(F.col("sketch.name")).distinct().collect()
+
+    assert [row.name for row in rows] == ['The Spanish Inquisition', 'The Piranha Brothers']
+```
+
+For the purposes of the exercise, the pipeline step logic (building dataframe, writing Hive tables, etc) will be included in each subcommand.  In a more substantial job we would most likely move the logic into another layer, say the model layer with the transformer.
+
+An example of a sub-command looks like this.
+
+```python
+def read_data(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    df = spark.spark().read.json("tests/fixtures/table1_rows.json", multiLine=True, prefersDecimal=True)
+
+    return monad.Right(val.replace('input_dataframe', df))
+```
+
+Now let's see how we might handle exceptions.  First add the pytest-mock library to the project.
+
+```shell
+poetry add pytest-mock --group dev
+```
+
+We'll cause the transformer to raise an exception by mocking the transformer function.  Our test looks like this.
+
+```python
+def test_pipeline_unexpected_exception(test_container, init_db, mocker):
+    def raise_exception(_df):
+        raise Exception('Boom!')
+
+    mocker.patch('job_tutorial.model.transformer.transform', raise_exception)
+
+    result = pipeline.run("tests/fixtures/table1_rows.json")
+
+    assert result.is_left()
+    assert result.error().message == "Boom!"
+```
+
+We use the pytest-mock mocker to patch the transform function to raise an error.  Let's run that and see what happens.
+
+```shell
+ poetry run python -m pytest tests/test_command/test_pipeline.py::test_pipeline_unexpected_exception
+```
+
+As excepted, the test blows up.  It never reaches the assert statement.  What we want to happen is for such an exception to be catch and turned into a Result monad (a Left in this case) containing the error.  We could use the common python `try/except` in those places where we think an error might be raised.  However, we're going to use wrapped Result monads everywhere, rather than try/except.  So, in Result monad terms what we actually want is a sort of `Try` monad.  Something that can wrap a function which raises an exception, catch it, and wrap it in a Left Result.  For this we'll use a Try decorator.  We have one already in the `util.monad` module.  We'll ignore the detail for the moment.  Its job is to wrap a function which might raise an exception (for example, an external library call like pyspark).  
+
+In our test, we've mocked the `transform` function, so to apply the try monad we'll need a function that calls the transform.  Its here we can add the try decorator.
+
+```python
+from job_tutorial.util import monad, error
+
+@monad.monadic_try(error_cls=error.JobError)
+def apply(df: dataframe.DataFrame) -> dataframe.DataFrame:
+    return transform(df)
+```
+
+We'll create a new pipeline module to use the try-based transform.  In that sub-command, we'll want to test the result from the transformation.  It should be a result (Left in this case).  We'll return a Left wrapping the exception class.  The new transform command now looks like this.
+
+```python
+def transform(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    result = transformer.apply(val.input_dataframe)
+
+    if result.is_left():
+        return result
+
+    return monad.Right(val.replace('output_dataframe', result.value))
+```
+
+Returning a Left will stop the composition pipeline at the transform step.  It won't attempt to write the dataframe to table2.
+
+And the new test now passes.
+
+```shell
+poetry run python -m pytest tests/test_command/test_pipeline.py::test_pipeline_try_monad
+```
+
+
+
+
+
+
+
+
+
 
