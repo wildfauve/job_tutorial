@@ -1,0 +1,18 @@
+[job]
+name = "job-tutorial"
+task_key = "job-tutorial"
+package_name = "job-tutorial"
+entry_point = "job_main"
+parameters = []
+tags.domain = "tutorial"
+
+[artefacts]
+root = "dbfs:/artifacts/tutorial/job_tutorial/dist"
+whl_artefacts = [
+    "dbfs:/artifacts/common/python/jobsworth-0.1.0-py3-none-any.whl",
+]
+
+[cluster]
+url = "https://adb-575697367950122.2.azuredatabricks.net"
+type = "existingCluster"
+cluster_id = "0914-001041-jbnfazlx"

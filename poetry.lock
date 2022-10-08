@@ -86,6 +86,14 @@ reference = "main"
 resolved_reference = "583104c4591186e9364f0a66ff90d68405055c43"
 
 [[package]]
+name = "databricks"
+version = "0.2"
+description = ""
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "delta-spark"
 version = "2.1.0"
 description = "Python APIs for using Delta Lake with Apache Spark"
@@ -478,7 +486,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "74d54b910b606c9237ed94e5e55f2d3cf378bc08737b4ce83f2365961e4a35c9"
+content-hash = "bf1ad9c0ab52bf90542bf9a2650df0a97200a4c6ce3c95f858041393c3efc662"
 
 [metadata.files]
 attrs = [
@@ -505,6 +513,10 @@ colorama = [
     {file = "colorama-0.4.5.tar.gz", hash = "sha256:e6c6b4334fc50988a639d9b98aa429a0b57da6e17b9a44f0451f930b6967b7a4"},
 ]
 databricker = []
+databricks = [
+    {file = "databricks-0.2-py2.py3-none-any.whl", hash = "sha256:2d4384b4d1f992ac9c94b0933a61082a61ee6bae5e95a208d1e843216d860adf"},
+    {file = "databricks-0.2.tar.gz", hash = "sha256:f20074914eea742cdc5f0b60db18b2408c62d90b50013adf5614f00a2e042059"},
+]
 delta-spark = [
     {file = "delta-spark-2.1.0.tar.gz", hash = "sha256:7f6d55d2344a39ad3ab3a0c08fb947a24a1a80d8bfa70318e66717d49ba8e8ce"},
     {file = "delta_spark-2.1.0-py3-none-any.whl", hash = "sha256:f3586cfddc871ffc7f12923ff4a4d601fc5efbf7b550e60388b22ede7f492fa1"},

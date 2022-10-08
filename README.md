@@ -667,9 +667,139 @@ In the final tutorial we complete the job setup and deploy it to a Databricks cl
 `git checkout -b tutorial5-deploy-the-job`
 
 
+## Tutorial 5: Deploying the Job
 
+`git checkout -b tutorial5-deploy-the-job`
 
+In this tutorial we'll complete the job setup, enable a way for our job to take input parameters, setup the deployment configuration, and finally deploy and run the job on the cluster.
 
+A spark job can be passes command-line style arguments when it's executed.  We want to use this approach to pass in the location of the json file which the job should process.  When arguments are passed to python jobs they are in a format understood by the [argparse library](https://docs.python.org/3.9/library/argparse.html).  The design of the job arguments looks like this.
 
+```shell
+spark-job --file <databricks-dbfs-file.json>
+```
 
+So, let's implement a parser for this, using `argparse`.  First, a simple test.
+
+```python
+from job_tutorial.util import parse_args
+
+def test_file_args_parser():
+    file_args = ["--file", "tests/fixtures/table1_rows.json"]
+
+    args = parse_args.parse_args(file_args)
+
+    assert args.file[0] == "tests/fixtures/table1_rows.json"
+```
+
+And then the implementation.
+
+```python
+import argparse
+
+def parse_args(args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--file', nargs=1, required=True)
+
+    return parser.parse_args(args)
+```
+
+Now, let's create a test for our new job layer.  We will use a job module to wrap the command.  The job module allows us to perform any initialisation (remember the DI container) needed before we run the command.  For instance, we might initialise observability objects, or obtain secrets, etc.  For this tutorial we will keep the job very simple.  It just needs to initialise the DI container, parse the arguments and call the command pipeline.
+
+First a test, at `tests/test_job/test_job.py`.
+
+```python
+from job_tutorial import job
+from job_tutorial.model import value
+
+def test_job_completes_successfully(test_container, init_db):
+    file_args = ["--file", "tests/fixtures/table1_rows.json"]
+
+    result = job.execute(args=file_args)
+
+    assert result.is_right()
+    assert isinstance(result.value, value.PipelineValue)
+```
+
+Now let's implement the basic needs of the job.
+
+```python
+from job_tutorial.command import pipeline_with_try
+from jobsworth import spark_job
+
+from job_tutorial.initialiser import container
+from job_tutorial.util import parse_args
+
+@spark_job.job()
+def execute(args=None):
+    parsed_args = parse_args.parse_args(args)
+
+    result = pipeline_with_try.run(object_location=parsed_args.file[0])
+
+    return result
+```
+
+We're using a little library called `jobsworth` which provides helpers to set up the initialisers.  Notice that the `container` initialiser is imported.  In tutorial 1 we setup the DI container initialiser.  The initialiser has no module-level function to initialise the container (if it did, when we import the module the container initialiser would run straight away).  But we might want to delay execution of the initialisers when the job function is invoked by Spark.  This is what `jobsworth` provides.  The initialiser uses a `jobsworth` decorator to register the initialisation function for later invocation.
+
+```python
+from jobsworth import spark_job
+
+@spark_job.register()
+def build_container():
+    if not env.Env().env == 'test':
+        init_container()
+
+```
+
+Then we decorate our job entry point with `@spark_job.job()` which will invoke all the regstered initialisation functions (in this case the `build_container`).
+
+Running our test shows that it passed.  If we set a breakpoint in the job test, we'll notice that our `spark-warehouse/tutorialdomain.db` folder contains the 2 tables created by the pipeline. We dont need to test that this is the case, as we have the pipeline tests implemented in the previous tutorial.  We just want to assert that the job returns a Right monad containing the `PipelineValue` used in the pipeline.  From the perspective of the Spark/Databricks platform, as long as the job doesn't raise an exception it is considered successful.  Databricks does have mechanisms to retry failed jobs.  But we might consider that this is leaving domain-level exception logic to the platform, which doesn't understand our domain.  Generally, we want to implement exception handling in the domain logic, and always return a non-exception.   
+
+Now, let's work out how the job entry point it defined.  When we deploy the project, it'll be packaged up into a python Wheel file.  This is a common deployment file structure using across the python world and is supported by Databricks.  The Wheel file contains metadata which includes the function to call to invoke the job (the entrypoint).  As we are using poetry, we'll also use poetry toi build the wheel file, and hence we can use poetry entrypoint conventions.  Which means we'll be added metadata to the `pyproject.toml` file.  The entrypoint for the job is `job_tutorial.job.execute`.  We use a poetry plugin definition to define this, and this metadata will be provided to Databricks to define the job entrypoint.  
+
+```toml
+[tool.poetry]
+name = "job-tutorial"
+
+[tool.poetry.plugins."job_entry_point_group"]
+job_main = "job_tutorial.job:execute"
+```
+
+We give the Datrabricks job configuration 2 pieces of information:
++ Package Name. This is `job-tutorial`.
++ Entry Point.  This is `job_main`.
+
+We'll use a python script which will build and deploy our job on Databricks.  This is a simple script just to get us started.  This is not a production CI/CD configuration.  This script is a CLI defined in a library called `databricker`
+
+Let's add that to our project.
+
+```shell
+poetry add git+https://github.com/wildfauve/databricker#main --group dev
+```
+
+The CLI depends on the installation and configuration of the Databricks-CLI.
+
+```shell
+poetry add databricks --group dev
+```
+
+To wire up the databricker CLI we add an entrypoint in the `pyproject.toml`
+
+```shell
+[tool.poetry.scripts]
+infra = "_infra.cli:infra_cli"
+```
+
+Then we create a `_infra` folder.  In here we add a `cli.py` module like so.
+
+```python
+from databricker import infra
+
+infra.configurator()(infra_config_file="_infra/infra.toml", dist="dist")
+
+def infra_cli():
+    infra.init_cli()
+```
+
+Notice that points to an `infra.toml` file
 
