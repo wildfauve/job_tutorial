@@ -11,4 +11,4 @@ def test_set_up_spark_session(test_container):
 
 
 def test_set_up_config(test_container):
-    assert configuration.config_for(['tutorialTable1', 'table']) == "tutorialTable1"
+    assert configuration.config_for(['tutorialTable1', 'table']) == "tutorial_table1"
