@@ -660,7 +660,11 @@ And the new test now passes.
 poetry run python -m pytest tests/test_command/test_pipeline.py::test_pipeline_try_monad
 ```
 
+## Next Tutorial
 
+In the final tutorial we complete the job setup and deploy it to a Databricks cluster.
+
+`git checkout -b tutorial5-deploy-the-job`
 
 
 
