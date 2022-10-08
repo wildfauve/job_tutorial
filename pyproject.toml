@@ -10,7 +10,6 @@ packages = [{include = "job_tutorial"}]
 python = "^3.9"
 pyspark = "^3.3.0"
 delta-spark = "^2.1.0"
-databricker = {git = "https://github.com/wildfauve/databricker", rev = "main"}
 jobsworth = {git = "https://github.com/wildfauve/jobsworth.git", rev = "main"}
 PyMonad = "^2.4.0"
 pino = "^0.6.0"
