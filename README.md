@@ -560,7 +560,9 @@ def write_table2(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineVa
     return monad.Right(val)
 ```
 
-Our this pipeline should return a Right wrapping the value.  Running this test should pass. 
+Our this pipeline should return a Right wrapping the value.  Notice we're using the a compose operator (`>>`).  This is not part of the common library, rather it's provided by the `PyMonad` library and some extensions provided in `job_tutorial/util/monad.py`.  This is the classic left to right composition.  Each function in the compose steps just needs to return a `monad.Right` or a `monad.Left`.  The compose unwraps the value and passes it to the next function.   
+
+Running this test should pass. 
 
 ```shell
 poetry run python -m pytest tests/test_command/test_pipeline.py::test_minimal_pipeline_returns_success
@@ -592,13 +594,20 @@ def read_data(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue
     return monad.Right(val.replace('input_dataframe', df))
 ```
 
+If we run our test we should see a pass.
+
+```shell
+poetry run python -m pytest tests/test_command/test_pipeline.py::test_minimal_pipeline_returns_success
+```
+
+
 Now let's see how we might handle exceptions.  First add the pytest-mock library to the project.
 
 ```shell
 poetry add pytest-mock --group dev
 ```
 
-We'll cause the transformer to raise an exception by mocking the transformer function.  Our test looks like this.
+We'll cause the transformer to raise an exception by mocking the transformer function.  Our test looks like this.  We would like the command to return a Left monad to us, with its value being some exception class.
 
 ```python
 def test_pipeline_unexpected_exception(test_container, init_db, mocker):
@@ -619,9 +628,9 @@ We use the pytest-mock mocker to patch the transform function to raise an error.
  poetry run python -m pytest tests/test_command/test_pipeline.py::test_pipeline_unexpected_exception
 ```
 
-As excepted, the test blows up.  It never reaches the assert statement.  What we want to happen is for such an exception to be catch and turned into a Result monad (a Left in this case) containing the error.  We could use the common python `try/except` in those places where we think an error might be raised.  However, we're going to use wrapped Result monads everywhere, rather than try/except.  So, in Result monad terms what we actually want is a sort of `Try` monad.  Something that can wrap a function which raises an exception, catch it, and wrap it in a Left Result.  For this we'll use a Try decorator.  We have one already in the `util.monad` module.  We'll ignore the detail for the moment.  Its job is to wrap a function which might raise an exception (for example, an external library call like pyspark).  
+As expected, the test blows up.  It never reaches the assert statement.  What we want to happen is for the exception to be caught and turned into a Result monad (a Left in this case) containing the error (an error class).  We could use the common python `try/except` in those places where we think an error might be raised.  However, we're going to use wrapped Result monads everywhere, rather than try/except.  So, in Result monad terms what we actually want is a sort of `Try` monad.  Something that can wrap a function which might raise an exception, catch it, and wrap it in a Left Result.  For this we'll use a Try decorator.  We have one already in the `util.monad` module.  We'll ignore the detail for the moment.  Its job is to wrap a function which might raise an exception (for example, an external library call like pyspark).  
 
-In our test, we've mocked the `transform` function, so to apply the try monad we'll need a function that calls the transform.  Its here we can add the try decorator.
+In our test, we've mocked the `transform` function, so to insert the try monad we'll need a function that calls the transform.  Its here we can add the try decorator.
 
 ```python
 from job_tutorial.util import monad, error
