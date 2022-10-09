@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "job-tutorial"
-version = "0.1.1"
+name = "job_tutorial"
+version = "0.1.0"
 description = ""
 authors = ["Col Perks <wild.fauve@gmail.com>"]
 readme = "README.md"
