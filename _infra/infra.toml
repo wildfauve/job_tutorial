@@ -1,7 +1,7 @@
 [job]
-name = "job-tutorial"
-task_key = "job-tutorial"
-package_name = "job-tutorial"
+name = "job_tutorial"
+task_key = "job_tutorial"
+package_name = "job_tutorial"
 entry_point = "job_main"
 parameters = []
 id = 828490754485102
