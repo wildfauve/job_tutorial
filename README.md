@@ -849,7 +849,7 @@ type = "existingCluster"
 cluster_id = "0914-001041-jbnfazlx"
 ```
 
-First we need to create the job.  This will give us a unique job-id, which the CLI will write to `infra.toml`.  We build the version `0.1.0` version of our project first.  Then create our job with the infra CLI.
+First we need to create the job.  This will give us a unique job-id, which the CLI will write to `infra.toml`.  We build the version `0.1.0` version of our project first (we only have to do this on create.  The `build-deploy` command will both build and deploy.  Then create our job with the infra CLI.
 
 ```shell
 poetry build
