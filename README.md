@@ -24,13 +24,11 @@ Now we'll add some dependencies. Firstly, to set up the dev packages.
 poetry add pytest --group dev
 poetry add pdbpp --group dev
 poetry add pytest-env --group dev
-poetry add databricks-cli --group dev
 ```
 
 We can also add any python project from GIT.
 
 ```bash
-poetry add git+https://github.com/wildfauve/databricker#main
 poetry add git+https://github.com/wildfauve/jobsworth.git#main
 ```
 
