@@ -5,6 +5,13 @@ description = ""
 authors = ["Col Perks <wild.fauve@gmail.com>"]
 readme = "README.md"
 packages = [{include = "job_tutorial"}]
+exclude = ["_infra/"]
+
+[tool.poetry.scripts]
+infra = "_infra.cli:infra_cli"
+
+[tool.poetry.plugins."job_entry_point_group"]
+job_main = "job_tutorial.job:execute"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -22,6 +29,7 @@ pdbpp = "^0.10.3"
 pytest-env = "^0.6.2"
 pytest-mock = "^3.10.0"
 databricks = "^0.2"
+databricker = {git = "https://github.com/wildfauve/databricker", rev = "main"}
 
 [tool.pytest.ini_options]
 minversion = "6.0"

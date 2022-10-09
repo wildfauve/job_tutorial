@@ -4,7 +4,10 @@ task_key = "job-tutorial"
 package_name = "job-tutorial"
 entry_point = "job_main"
 parameters = []
-tags.domain = "tutorial"
+id = 828490754485102
+
+[job.tags]
+domain = "tutorial"
 
 [artefacts]
 root = "dbfs:/artifacts/tutorial/job_tutorial/dist"

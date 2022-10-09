@@ -788,7 +788,14 @@ To wire up the databricker CLI we add an entrypoint in the `pyproject.toml`
 infra = "_infra.cli:infra_cli"
 ```
 
-Then we create a `_infra` folder.  In here we add a `cli.py` module like so.
+Then we create a `_infra` folder at the root of our project.  We can exclude this folder fromm the an poetry build by updating the `pyproject.toml` file thus.
+
+```toml
+[tool.poetry]
+exclude = ["_infra/"]
+```
+
+In here we add a `cli.py` module like so.
 
 ```python
 from databricker import infra
@@ -799,5 +806,68 @@ def infra_cli():
     infra.init_cli()
 ```
 
-Notice that points to an `infra.toml` file
+Notice that points to an `infra.toml` file which we'll setup in the second.  Run the CLI like so.
+
+```shell
+poetry run infra
+```
+
+This should produce...
+
+```text
+Usage: infra [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  build-deploy  Builds and deploys the project.
+  create-job    Creates a Spark job from the configuration provided in...
+  list-job      Lists the job with the job id defined in the infra.toml...
+```
+
+The first step is to create the job on a databricks cluster.  We won't go over the `infra.toml` structure in much detail.  The configuration for the job is as follows.  It tells the databricker library, that we want to configure a job, on an existing cluster with the entry points we defined above.  The CLI will bump the project version, build the job (as a Python Wheel) copy it to the cluster (at the location defined under the `artefacts` key), and update the job configuration with the new wheel version.
+
+```toml
+[job]
+name = "job-tutorial"
+task_key = "job-tutorial"
+package_name = "job-tutorial"
+entry_point = "job_main"
+parameters = []
+tags.domain = "tutorial"
+
+[artefacts]
+root = "dbfs:/artifacts/tutorial/job_tutorial/dist"
+whl_artefacts = [
+    "dbfs:/artifacts/common/python/jobsworth-0.1.0-py3-none-any.whl",
+]
+
+[cluster]
+url = "https://adb-575697367950122.2.azuredatabricks.net"
+type = "existingCluster"
+cluster_id = "0914-001041-jbnfazlx"
+```
+
+First we need to create the job.  This will give us a unique job-id, which the CLI will write to `infra.toml`.  We build the version `0.1.0` version of our project first.  Then create our job with the infra CLI.
+
+```shell
+poetry build
+poetry run infra create-job
+```
+
+We should see something like this logged to stdout.
+
+```text
+[infra][2022-10-10 07:30:15.872] Infra File Validated OK
+[infra][2022-10-10 07:30:15.872] Building Create Job Request
+[infra][2022-10-10 07:30:15.872] Building Task Configuration
+[infra][2022-10-10 07:30:15.872] Creating Job: job-tutorial, job-tutorial
+[infra][2022-10-10 07:30:16.521] Create Job Success, with new job id: 828490754485102
+[infra][2022-10-10 07:30:16.521] Updating infra tomli with job id
+[infra][2022-10-10 07:30:16.522] Completed
+```
+
+We can see it has created a new job on the cluster with the id `828490754485102`.  This will be added to the `infra.toml` file under the `[job]` key.
+
 
