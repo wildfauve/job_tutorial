@@ -15,11 +15,11 @@ The tutorials are split as follows:
 
 This tutorial is a collection of branches linked to each other, with each branch dealing with a specific tutorial.  You start on `main`.  At the beginning of each tutorial checkout the branch defined at the top of the tutorial.
 
-## Setting up A Poetry Env
+## Tutorial 0: Setting up A Poetry Env
 
-Before we start with this tutorial, let's have a quick look at setting up a python project from scratch. 
+Before we start with the remaining tutorials, let's have a quick look at setting up a python project from scratch. 
 
-We create a new python project (using Poetry) as follows.
+We'll use poetry to create a new python project.
 
 ```bash
 poetry new random_python_project_using_poetry
