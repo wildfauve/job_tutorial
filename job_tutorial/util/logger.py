@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Any
 from pino import pino
 import json
 import time
@@ -6,11 +6,11 @@ import time
 from . import json_util
 
 # public interface
-def info(*args, **kwargs) -> None:
-    _log(*args, **{**{'level': 'info'}, **kwargs})
+def info(msg: str, observer: Optional = None, status: str = 'ok', ctx: Dict[str, str] = {}) -> None:
+    _log('info', msg, observer, status, ctx)
 
 
-def _log(level: str, msg: str, observer: Optional = None, status: str = 'ok', ctx: Dict[str, str] = {}) -> None:
+def _log(level: str, msg: str, observer: Any, status: str, ctx: Dict[str, str]) -> None:
     if level not in level_functions.keys():
         return
     level_functions.get(level, info)(logger(), msg, meta(observer, status, ctx))
@@ -36,17 +36,6 @@ def with_perf_log(perf_log_type: str = None, name: str = None):
     return inner
 
 
-def log_decorator(fn):
-    def log_writer(*args, **kwargs):
-        log(
-            level='info',
-            msg='Handling Command {fn}'.format(fn=fn.__name__),
-            ctx=args[0].event,
-            tracer=args[0].tracer
-        )
-        return fn(*args, **kwargs)
-    return log_writer
-
 def custom_pino_dump_fn(json_log):
     return json.dumps(json_log, cls=json_util.CustomLogEncoder)
 
@@ -57,7 +46,7 @@ def _info(lgr, msg: str, meta: Dict) -> None:
     lgr.info(meta, msg)
 
 def perf_log(fn: str, delta_t: float):
-    info(logger(), "PerfLog", {'ctx': {'fn': fn, 'delta_t': delta_t}})
+    info("PerfLog", ctx={'fn': fn, 'delta_t': delta_t})
 
 def meta(observer, status: Union[str, int], ctx: Dict):
     # coersed_ctx = nested_coerse({}, ctx)

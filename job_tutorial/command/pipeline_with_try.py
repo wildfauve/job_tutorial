@@ -1,6 +1,6 @@
 from job_tutorial.model import value, transformer
 from job_tutorial.repo import repo_inject
-from job_tutorial.util import monad, spark
+from job_tutorial.util import monad, spark, logger
 
 
 def run(object_location: str) -> monad.EitherMonad[value.PipelineValue]:
@@ -13,18 +13,24 @@ def run(object_location: str) -> monad.EitherMonad[value.PipelineValue]:
 
 
 def read_data(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    logger.info("Read File", ctx={'fileLocation': val.object_location})
+
     df = spark.spark().read.json(val.object_location, multiLine=True, prefersDecimal=True)
 
     return monad.Right(val.replace('input_dataframe', df))
 
 
 def write_table1(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    logger.info("Write Table 1")
+
     repo_inject.tutorial_table1_repo().append(val.input_dataframe)
 
     return monad.Right(val)
 
 
 def transform(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    logger.info("Perform Transform")
+
     result = transformer.apply(val.input_dataframe)
 
     if result.is_left():
@@ -34,6 +40,8 @@ def transform(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue
 
 
 def write_table2(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
+    logger.info("Write Table 2")
+
     repo_inject.tutorial_table2_repo().append(val.output_dataframe)
 
     return monad.Right(val)

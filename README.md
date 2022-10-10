@@ -674,8 +674,10 @@ In this tutorial we'll complete the job setup, enable a way for our job to take 
 A spark job can be passes command-line style arguments when it's executed.  We want to use this approach to pass in the location of the json file which the job should process.  When arguments are passed to python jobs they are in a format understood by the [argparse library](https://docs.python.org/3.9/library/argparse.html).  The design of the job arguments looks like this.
 
 ```shell
-spark-job --file <databricks-dbfs-file.json>
+job_tutorial --file <databricks-dbfs-file-location>
 ```
+
+As we go we'll add some logging.  We'll use structured logging library, and we already have helpers in `util.logger.py`.  The logs end up in the Databricks job logs.  
 
 So, let's implement a parser for this, using `argparse`.  First, a simple test.
 
@@ -726,10 +728,11 @@ from job_tutorial.command import pipeline_with_try
 from jobsworth import spark_job
 
 from job_tutorial.initialiser import container
-from job_tutorial.util import parse_args
+from job_tutorial.util import parse_args, logger
 
 @spark_job.job()
 def execute(args=None):
+    logger.info('Start Job')
     parsed_args = parse_args.parse_args(args)
 
     result = pipeline_with_try.run(object_location=parsed_args.file[0])
@@ -878,4 +881,24 @@ We can see it has created a new job on the cluster with the id `828490754485102`
 
 Finally, let's run the job.  We need to setup some test data for the job to use as input.  The test fixture will provide exactly what we need.  This can be copied to the cluster using the CLI or uploaded via the Databricks UI.  
 
+As we'll pass an argument into the job specifying the file location, executing the job via the Databricks API will be a good bet.
 
+A template HTTP request to run the job looks like this.
+
+```http request
+POST {{cluster}}/jobs/run-now
+Authorization: Bearer {{personal_access_token}}
+
+{
+  "job_id": {{tutorial_job}},
+  "python_params": [
+            "--file",
+            "dbfs:/FileStore/tutorials/table1_rows.json"
+          ]
+}
+```
+
+And finally, pop into the Databrick UI to view the 2 tables created by the job.  Also checkout the logs from the job run.
+
+
+You may also have noticed that the job is not idempotent in the least!  Try running it again!  It'll happily write the same rows to table1 and 2.  That's a problem for another time.

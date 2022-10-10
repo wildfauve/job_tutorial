@@ -4,7 +4,6 @@ task_key = "job_tutorial"
 package_name = "job_tutorial"
 entry_point = "job_main"
 parameters = []
-id = 421584604464314
 
 [job.tags]
 domain = "tutorial"
