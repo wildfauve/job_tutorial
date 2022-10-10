@@ -4,7 +4,7 @@ task_key = "job_tutorial"
 package_name = "job_tutorial"
 entry_point = "job_main"
 parameters = []
-id = 969412478501943
+id = 421584604464314
 
 [job.tags]
 domain = "tutorial"
@@ -12,7 +12,7 @@ domain = "tutorial"
 [artefacts]
 root = "dbfs:/artifacts/tutorial/job_tutorial/dist"
 whl_artefacts = [
-    "dbfs:/artifacts/common/python/jobsworth-0.1.0-py3-none-any.whl",
+    "dbfs:/artifacts/common/python/dist/jobsworth-0.1.1-py3-none-any.whl",
 ]
 
 [cluster]

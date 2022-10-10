@@ -849,7 +849,7 @@ type = "existingCluster"
 cluster_id = "0914-001041-jbnfazlx"
 ```
 
-First we need to create the job.  This will give us a unique job-id, which the CLI will write to `infra.toml`.  We build the version `0.1.0` version of our project first (we only have to do this on create.  The `build-deploy` command will both build and deploy.  Then create our job with the infra CLI.
+First we need to create the job. The `create-job` command will both build the project into a Wheel file and deploy it to the cluster  This will give us a unique job-id, which the CLI will write to `infra.toml`.  The `build-deploy` command is used to update an existing job.  First, we're create our job with the infra CLI.
 
 ```shell
 poetry build
@@ -859,15 +859,23 @@ poetry run infra create-job
 We should see something like this logged to stdout.
 
 ```text
-[infra][2022-10-10 07:30:15.872] Infra File Validated OK
-[infra][2022-10-10 07:30:15.872] Building Create Job Request
-[infra][2022-10-10 07:30:15.872] Building Task Configuration
-[infra][2022-10-10 07:30:15.872] Creating Job: job-tutorial, job-tutorial
-[infra][2022-10-10 07:30:16.521] Create Job Success, with new job id: 828490754485102
-[infra][2022-10-10 07:30:16.521] Updating infra tomli with job id
-[infra][2022-10-10 07:30:16.522] Completed
+[infra][2022-10-10 13:53:25.355] Infra File Validated OK
+[infra][2022-10-10 13:53:26.912] SUCCESS: 
+[infra][2022-10-10 13:53:27.472] SUCCESS: Bump Version
+[infra][2022-10-10 13:53:28.276] SUCCESS: Poetry build
+[infra][2022-10-10 13:53:28.278] Existing Version: 0.1.0 New Version: 0.1.1
+[infra][2022-10-10 13:53:28.279] Copy dist/job_tutorial-0.1.1-py3-none-any.whl to DBFS Location dbfs:/artifacts/tutorial/job_tutorial/dist
+[infra][2022-10-10 13:53:31.118] SUCCESS: Copy to DBFS
+[infra][2022-10-10 13:53:31.119] Building Create Job Request
+[infra][2022-10-10 13:53:31.119] Building Task Configuration
+[infra][2022-10-10 13:53:31.120] Creating Job: job_tutorial, job_tutorial
+[infra][2022-10-10 13:53:31.958] Create Job Success, with new job id: 421584604464314
+[infra][2022-10-10 13:53:31.958] Updating infra tomli with job id
+[infra][2022-10-10 13:53:31.959] Completed
 ```
 
 We can see it has created a new job on the cluster with the id `828490754485102`.  This will be added to the `infra.toml` file under the `[job]` key.
+
+Finally, let's run the job.  We need to setup some test data for the job to use as input.  The test fixture will provide exactly what we need.  This can be copied to the cluster using the CLI or uploaded via the Databricks UI.  
 
 

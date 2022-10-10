@@ -63,7 +63,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "databricker"
-version = "0.1.42"
+version = "0.1.44"
 description = ""
 category = "dev"
 optional = false
@@ -83,7 +83,7 @@ tomli-w = "^1.0.0"
 type = "git"
 url = "https://github.com/wildfauve/databricker"
 reference = "main"
-resolved_reference = "a7671066eac215f921943b33a2f17028a6e98d68"
+resolved_reference = "3869b57c01a8765a3586facb080af1f89ff34a74"
 
 [[package]]
 name = "databricks"
