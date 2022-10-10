@@ -13,7 +13,7 @@ def run(object_location: str) -> monad.EitherMonad[value.PipelineValue]:
 
 
 def read_data(val: value.PipelineValue) -> monad.EitherMonad[value.PipelineValue]:
-    df = spark.spark().read.json("tests/fixtures/table1_rows.json", multiLine=True, prefersDecimal=True)
+    df = spark.spark().read.json(val.object_location, multiLine=True, prefersDecimal=True)
 
     return monad.Right(val.replace('input_dataframe', df))
 
