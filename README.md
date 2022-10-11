@@ -727,10 +727,9 @@ Now let's implement the basic needs of the job.
 from job_tutorial.command import pipeline_with_try
 from jobsworth import spark_job
 
-from job_tutorial.initialiser import container
 from job_tutorial.util import parse_args, logger
 
-@spark_job.job()
+@spark_job.job(initialiser_module='job_tutorial.initialiser')
 def execute(args=None):
     logger.info('Start Job')
     parsed_args = parse_args.parse_args(args)
@@ -740,7 +739,7 @@ def execute(args=None):
     return result
 ```
 
-We're using a little library called `jobsworth` which provides helpers to set up the initialisers.  Notice that the `container` initialiser is imported.  In tutorial 1 we setup the DI container initialiser.  The initialiser has no module-level function to initialise the container (if it did, when we import the module the container initialiser would run straight away).  But we might want to delay execution of the initialisers when the job function is invoked by Spark.  This is what `jobsworth` provides.  The initialiser uses a `jobsworth` decorator to register the initialisation function for later invocation.
+We're using a little library called `jobsworth` which provides helpers to set up the initialisers.  We want to initialise the container when the job starts.  In tutorial 1 we setup the DI container initialiser.  The initialiser has no module-level function to initialise the container (if it did, when we import the module the container initialiser would run straight away).  But we might want to delay execution of the initialisers when the job function is invoked by Spark.  This is what `jobsworth` provides.  The initialiser uses a `jobsworth` decorator to register the initialisation function for later invocation.  We give jobsworth the location of the intialisers.
 
 ```python
 from jobsworth import spark_job

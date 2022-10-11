@@ -168,18 +168,24 @@ python-versions = "*"
 
 [[package]]
 name = "jobsworth"
-version = "0.1.1"
+version = "0.1.2"
 description = ""
 category = "main"
 optional = false
 python-versions = "^3.9"
 develop = false
 
+[package.dependencies]
+delta-spark = "^2.1.0"
+pino = "^0.6.0"
+PyMonad = "^2.4.0"
+pyspark = "^3.3.0"
+
 [package.source]
 type = "git"
 url = "https://github.com/wildfauve/jobsworth.git"
 reference = "main"
-resolved_reference = "42231598435744ea46364e35fe9a9f51d321a6f8"
+resolved_reference = "8e016685414b40892bfc23559ff5aa97e55e3c53"
 
 [[package]]
 name = "packaging"
